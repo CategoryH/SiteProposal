@@ -52,5 +52,29 @@
 2. 初期，管理员定向邀请。
 
 ### 版面
-定义
+定义：版面是一个固定主题的讨论场所，是固定主题下问题和答案的总体。hello 话题的页面记作 site.com/r/hello
+
+####版面分栏：优质内容/问题列表/最新回答/精华
+**记号**：
+1. 首页: r/hello#popular
+2. 问题列表: r/hellp#questions
+3. 最新回答: r/hello#newest
+4. 精华: r/hello#best
+
+**优质内容**，即版面的首页，预览一系列优质答案，根据
+
+    score = f(quality, age)
+ 
+排序，优质内容分数高，新内容优先于老内容。（TODO）
+
+**问题列表**（时间和 votes 的函数，版面维护者可以剔除问题）
+
+**最新回答**（时间逆序，**仅**按时间排序）
+
+**精华**（与时间无关的，讨论沉淀下来的优质内容）
+
+
+### 杂项
+MathJax + XyJax 设置参见 https://stacks.math.columbia.edu/tag/0780 的 source code.
+
 
