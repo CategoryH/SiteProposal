@@ -16,6 +16,22 @@
 1. 用邮箱验证
 2. 用密钥验证
 
+### 用户的属性
+
+####public:
+* 昵称（全站唯一）
+* 公钥
+* 一句话简介
+* 角色（详见下文）
+
+####private:
+* 私钥（可能不存在）
+* 邮箱
+* 密码
+* `vote_powers` 是一个整数值向量，每个版面一个数值，决定了用户在每个版的投票权重，默认值在每个版都是 100. 最低可以低到 1, 最高 2000 （TODO: 如何修改 vote_powers? 提供了优质答案权重上升？发劣质答案或者无关话题权重下降？）
+  
+TODO: 关注问题、版面、收藏夹是公开还是私密？
+
 ### 用户角色
 用户有三种角色，是递进关系
 1. 普通用户
@@ -27,9 +43,10 @@
 
 #### 专有操作
 **普通用户**：
-1. 提问/编辑提问（用户把问题提交给版面如 /r/HelloWorld）
-2. 回答/编辑回答（用户把回答提交给问题如 /question/X，生成回答 /question/X/answer/Y）
-3. 赞/踩问题（赞：upvote+1, 踩: downvote+1, 注意两者是分开计数的，每个问题统计 vote = (upvote, downvote).）
+以版面 `/r/HelloWorld` 为例
+1. 提问/编辑提问（用户把问题提交给版面如 `/r/HelloWorld`）
+2. 回答/编辑回答（用户把回答提交给问题如 `/question/X`，生成回答 `/question/X/answer/Y`）
+3. 赞/踩问题（示例——赞：`upvote += user.vote_powers("HelloWorld")`, 踩: `downvote += user.vote_powers("HelloWorld")`, 注意两者是分开计数的，每个问题计算 `vote = (upvote, downvote)`.）
 4. 赞/踩答案（同上）
 5. 关注问题（+取消）
 6. 关注版面（+取消）
@@ -52,20 +69,35 @@
 2. 初期，管理员定向邀请。
 
 ### 版面
-定义：版面是一个固定主题的讨论场所，是固定主题下问题和答案的总体。hello 话题的页面记作 site.com/r/hello
+定义：版面是一个固定主题的讨论场所，是固定主题下问题和答案的总体。hello 话题的页面记作 `site.com/r/hello`
 
 ####版面分栏：优质内容/问题列表/最新回答/精华
-**记号**：
-1. 首页: r/hello#popular
-2. 问题列表: r/hellp#questions
-3. 最新回答: r/hello#newest
-4. 精华: r/hello#best
+
+1. 首页: `r/hello#popular`
+2. 问题列表: `r/hellp#questions`
+3. 最新回答: `r/hello#newest`
+4. 精华: `r/hello#best`
 
 **优质内容**，即版面的首页，预览一系列优质答案，根据
 
-    score = f(quality, age)
+     hotness = f(quality, date)
  
-排序，优质内容分数高，新内容优先于老内容。（TODO）
+排序，目标是做到优质内容分数高，新内容优先于老内容。其中 `quality` 可以这样定义（参数待定）
+
+      vdiff = upvote - downvote // 每个 vote 带来的变化 ≈ 100
+       sign = sgn(vdiff)
+    quality = sign * log(1 + abs(vdiff/1000)) * 10 // 这是与时间无关的 quality, 
+              // 这个 quality 的要点在于，vdiff 不大的时候基本上跟 vdiff 是线性的，
+              // 较大的时候每次 vdiff 增加带来的 quality 增量较小
+              // 里面的 1000 和 10 是可以调整的参数
+    
+而 `date` 是诞生时间，定义为发文时刻的 epoch time - 某个固定值。
+
+如果定义
+
+    hotness = quality + k * date
+    
+则可实现优质内容分数高，新内容优先于老内容，其中 `k` 是一个正的参数。（**Remark**: 更自然的想法是用发帖至今的时间，帖子的 ”年龄“ 来计算 hotness, 但年龄是个一直变化的东西，`date` 是一个固定值，发文的那一刻就可计算，且后来者的 `date` 一定大于先来的，这是 reddit 的办法。）
 
 **问题列表**（时间和 votes 的函数，版面维护者可以剔除问题）
 
@@ -76,5 +108,8 @@
 
 ### 杂项
 MathJax + XyJax 设置参见 https://stacks.math.columbia.edu/tag/0780 的 source code.
+
+### Idea
+vote 越多，每个 vote 的贡献越小？
 
 
