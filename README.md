@@ -48,7 +48,7 @@ TODO: 关注问题、版面、收藏夹是公开还是私密？
 1. 提问/编辑提问（用户把问题提交给版面如 `/r/HelloWorld`）
 2. 回答/编辑回答（用户把回答提交给问题如 `/question/X`，生成回答 `/question/X/answer/Y`）
 3. 评论问题，回复评论
-3. 赞/踩问题（赞：`upvote += user.vote_powers("HelloWorld")`, 踩: `downvote += user.vote_powers("HelloWorld")`, 注意两者是分开计数的，每个问题计算 `vote = (upvote, downvote)`.）
+3. 赞/踩问题（赞：`upvote += user.vote_powers("HelloWorld")/100`, 踩: `downvote += user.vote_powers("HelloWorld")/100`, 注意两者是分开计数的，每个问题计算 `vote = (upvote, downvote)`.）
 4. 赞/踩答案（同上）
 4. 赞/踩评论（同上）
 5. 问题/答案提交的同时默认提交者给自己 upvote（用权重算）
@@ -74,8 +74,33 @@ TODO: 关注问题、版面、收藏夹是公开还是私密？
 1. 版面管理员发给高质量答案的作者（每个高质量回答两个邀请码，每个人可用的邀请码不能超过五个）。
 2. 初期，管理员定向邀请。
 
+### Confidence Score
+
+任何内容，有了一定量的 `up` 和 `down` 投票，可以计算其 `confidence score` ([Wikipedia](https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval)), 即对其真实分数的有 `95%` 信心的估算的下界。下面会用到不少，在此介绍。
+
+计算方法如下：
+
+    def confidence(up, down):
+        n = up + down
+        if (n == 0): 
+            return 0.0
+        p = up / n
+        z = 1.96
+        y = z * z / n
+        return (p + y/2 - z * math.sqrt((p * (1-p) + y/4)/n))/(1 + y)
+        
+写死数字的话如下
+
+    def confidence(up, down):
+        if (up == 0):
+            return 0.0
+        else:
+            n = up + down        
+            return (up + 1.9208 - 1.96 * math.sqrt(up * down / n + 0.9604))/(n + 3.8416)
+
 ### 版面
 定义：版面是一个固定主题的讨论场所，是固定主题下问题和答案的总体。hello 话题的页面记作 `site.com/r/hello`
+
 
 #### 版面分栏：优质内容/问题列表/最新回答/精华
 
@@ -90,12 +115,12 @@ TODO: 关注问题、版面、收藏夹是公开还是私密？
  
 目标是做到优质内容分数高，新内容优先于老内容。其中 `quality` 可以这样定义（参数待定）
 
-      vdiff = upvote - downvote // 每个 vote 带来的变化 ≈ 100
+      vdiff = upvote - downvote // 每个 vote 带来的变化 ≈ 1
        sign = sgn(vdiff)
-    quality = sign * log(1 + abs(vdiff/1000)) * 10 // 这是与时间无关的 quality, 
+    quality = sign * log(1 + abs(vdiff/10)) * 10 // 这是与时间无关的 quality, 
               // 这个 quality 的要点在于，vdiff 不大的时候基本上跟 vdiff 是线性的，
               // 较大的时候每次 vdiff 增加带来的 quality 增量较小
-              // 里面的 1000 和 10 是可以调整的参数
+              // 里面的 10 是可以调整的参数
     
 而 `date` 是（答案的）诞生时间，定义为发文时刻的 `epochtime() - Constant`, 单位是秒。
 
@@ -109,15 +134,29 @@ TODO: 关注问题、版面、收藏夹是公开还是私密？
 
 **问题列表**（时间和 `votes` 的函数，`downvote >> upvote` 的关闭）
 
+关闭问题的逻辑：`downvote-confidence > 0.5` 的问题，启动关闭投票。这里
+
+    downvote-confidence(up, down) = confidence(down, up)
+    
+简单说就是如果 `up` 为 `0`, `down` 超过 `4`, 或者 `up = 1`, `down` 超过 `7`, `(2,9)`, `(3, 11)`…… 
+（TODO: 谁可以参与这个投票？）
+
 **最新回答**（时间逆序，**仅**按时间排序）
 
 **精华内容**（与时间无关的，讨论沉淀下来的优质内容）
-直接用 quality 进行排序？
+用 `confidence score` 排序。
 
 ### 问题页面
 信息结构如下
 
     问题
+    ├────── 评论x
+    │       ├── 评论x的回复
+    │       └── 评论x的回复
+    ├────── 评论y
+    │       ├── 评论y的回复
+    │       └── 评论y的回复
+    │       
     ├── 答案1
     │   ├── 评论a
     │   │   ├── 评论a的回复
@@ -167,30 +206,9 @@ TODO: 关注问题、版面、收藏夹是公开还是私密？
 用户订阅了不同的版面、问题和收藏夹，起码用户登录后的时间线要给这些地方出现的新内容一个排序。（TODO）
 
 ### 评论排序
-用 [confidence score](https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval), 从 `up` 和 `down` 计算出来（`up` 和 `down` 分别是评论得到的票数）。
+用 `confidence score`, 从 `up` 和 `down` 计算出来（`up` 和 `down` 分别是评论得到的票数）。
 
-计算方法如下：
-
-    def confidence(up, down):
-        n = up + down
-        if (n == 0): 
-            return 0.0
-        p = up / n
-        z = 1.96
-        y = z * z / n
-        return (p + y/2 - z * math.sqrt((p * (1-p) + y/4)/n))/(1 + y)
-        
-写死数字的话如下
-
-    def confidence(up, down):
-        if (up == 0):
-            return 0.0
-        else:
-            n = up + down        
-            return (up + 1.9208 - 1.96 * math.sqrt(up * down / n + 0.9604))/(n + 3.8416)
-        
 `score` 相同的情形，随机排序，但尊重评论的从属关系。
-
 
 ### 杂项
 MathJax + XyJax 设置参见 https://stacks.math.columbia.edu/tag/0780 的 source code.
