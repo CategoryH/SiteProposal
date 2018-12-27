@@ -1,0 +1,10 @@
+*.class
+*.log
+*.idea
+
+# MacOS
+.DS_Store
+
+*.out
+*.toc
+*.aux
