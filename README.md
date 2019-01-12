@@ -45,7 +45,7 @@ TODO: 关注问题、版面、收藏夹是公开还是私密？
 #### 专有操作
 **普通用户**：以版面 `/r/HelloWorld` 为例
 
-1. 提问/编辑提问（用户把问题提交给版面如 `/r/HelloWorld`）
+1. 提问/编辑提问（用户把问题提交给版面如 `/r/HelloWorld`）（提问两天内能编辑，两天之后只能补充）
 2. 回答/编辑回答（用户把回答提交给问题如 `/question/X`，生成回答 `/question/X/answer/Y`）
 3. 评论问题，回复评论
 3. 赞/踩问题（赞：`upvote += user.vote_powers("HelloWorld")`, 踩: `downvote += user.vote_powers("HelloWorld")`, 注意两者是分开计数的，每个问题计算 `vote = (upvote, downvote)`.）
